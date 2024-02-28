@@ -1,2 +1,2 @@
 # Minimalloc
-### because malloc is too slow
+because malloc is too slow
