@@ -2,12 +2,12 @@
 #include <vector>
 #include <stddef.h>
 #include <stdint.h>
-
+#include <cassert>
 
 int main() {
 
-    std::vector<size_t> memory_block_sizes = {16, 32, 64, 128, 256, 512, 1024, 2048};
-    uint64_t memory_pool_size = 1<<20;
+    const std::vector<size_t> memory_block_sizes = {16, 32, 64, 128, 256, 512, 1024, 2048};
+    const uint64_t memory_pool_size = 1<<20;
 
     minimalloc m = minimalloc(memory_block_sizes, memory_pool_size);
 
