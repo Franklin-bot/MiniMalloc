@@ -1,4 +1,0 @@
-/Users/FranklinZhao/minimalloc/build/CMakeFiles/MINIMALLOC_lib.dir
-/Users/FranklinZhao/minimalloc/build/CMakeFiles/TEST_exe.dir
-/Users/FranklinZhao/minimalloc/build/CMakeFiles/edit_cache.dir
-/Users/FranklinZhao/minimalloc/build/CMakeFiles/rebuild_cache.dir
