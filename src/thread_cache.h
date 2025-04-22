@@ -34,7 +34,6 @@ public:
     };
 
     thread_cache(size_t num_buckets, size_t bucket_cache_capacity);  
-
     std::vector<thread_cache::bucket_cache>& get_bucket_caches() { return bucket_cache_list_; };
 
 private:

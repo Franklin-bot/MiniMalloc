@@ -6,11 +6,13 @@ private:
 
     class node {
     private:
+
         size_t offset_{0};
         node* next_{nullptr};
-
         friend class bucket;
+
     public:
+
         static constexpr uint64_t INVALID  = UINT64_MAX;
     };
     
@@ -25,6 +27,6 @@ public:
     void* allocate();
     void free(uint8_t* pointer);
 
-    size_t get_size() { return size_; }
+    size_t get_size() const { return size_; }
     void set_size(size_t size) {size_ = size; }
 };

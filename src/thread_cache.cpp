@@ -30,6 +30,5 @@ void* thread_cache::bucket_cache::alloc_from_bucket_cache(){
 
     void* p = stack[size_-1];
     size_--;
-    std::cout << p << "\n";
     return p;
 }

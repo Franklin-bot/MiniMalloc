@@ -1,7 +1,5 @@
 #include "bucket.h"
 
-
-
 // constructor
 bucket::bucket(uint8_t* pbuffer, uint8_t* pbufferend, size_t block_size){
 
@@ -26,7 +24,6 @@ bucket::bucket(uint8_t* pbuffer, uint8_t* pbufferend, size_t block_size){
         address += block_size;
         size_++;
     }
-
 
     node last_node;
     last_node.offset_ = node::INVALID;
@@ -58,4 +55,5 @@ void bucket::free(uint8_t* const pointer){
     head_ = (node*)pointer;
     *head_ = new_node;
     size_++;
+
 }
