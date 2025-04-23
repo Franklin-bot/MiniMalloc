@@ -1,5 +1,6 @@
 #include "thread_cache.h"
-#include <iostream>
+
+namespace minimalloc {
 
 thread_cache::thread_cache(size_t num_buckets, size_t bucket_cache_capacity){
 
@@ -32,3 +33,5 @@ void* thread_cache::bucket_cache::alloc_from_bucket_cache(){
     size_--;
     return p;
 }
+
+};

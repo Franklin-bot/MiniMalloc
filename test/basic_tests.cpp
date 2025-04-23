@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <cassert>
 
+namespace minimalloc {
+
 const std::vector<size_t> memory_block_sizes = {16, 32, 64, 128, 256, 512, 1024, 2048};
 const uint64_t memory_pool_size = 1<<20;
 
@@ -13,7 +15,7 @@ void test_basic_allocate(){
     minimalloc m = minimalloc(memory_block_sizes, memory_pool_size);
 
     void* p;
-    for (int i = 0; i < 8; i++){
+    for (int i = 0; i < CACHE_WARMUP_SIZE; i++){
         p = m.allocate(8);
     }
 
@@ -30,7 +32,7 @@ void test_basic_deallocate(){
     std::cout << "test 2: basic deallocate\n";
     minimalloc m = minimalloc(memory_block_sizes, memory_pool_size);
 
-    void* p = m.allocate(7);
+    void* p = m.allocate(8);
 
     minimalloc_stats ms = m.get_stats();
     assert(ms.thread_cache_bucket_size_[0] == CACHE_WARMUP_SIZE-1);
@@ -73,7 +75,7 @@ void test_return_from_bucket_cache(){
     minimalloc m = minimalloc(memory_block_sizes, memory_pool_size);
 
     std::vector<void*> pointers{};
-    for (int i = 0; i < 17; i++){
+    for (int i = 0; i < MAX_CACHE_CAPACITY+1; i++){
         pointers.push_back(m.allocate(8));
     }
 
@@ -84,12 +86,11 @@ void test_return_from_bucket_cache(){
     assert(ms.global_pool_bucket_size_[0] = global_bucket_blocks - CACHE_WARMUP_SIZE*3);
 
     // fill cache
-    for (int i = 0; i < 9; i++){
+    for (int i = 0; i < CACHE_WARMUP_SIZE+1; i++){
         m.deallocate(pointers.back());
         pointers.pop_back();
     }
     ms = m.get_stats();
-    ms.print();
     assert(ms.thread_cache_bucket_size_[0] == MAX_CACHE_CAPACITY);
 
     // overflow cache
@@ -97,21 +98,22 @@ void test_return_from_bucket_cache(){
     pointers.pop_back();
 
     ms = m.get_stats();
-    ms.print();
     // return CACHE_WARMUP_SIZE to global pool
     assert(ms.thread_cache_bucket_size_[0] == MAX_CACHE_CAPACITY - CACHE_WARMUP_SIZE + 1);
 
     std::cout << "test 4 passed!\n";
 }
 
+};
 
 int main() {
 
-    std::thread([](){ test_basic_allocate(); }).join();
-    std::thread([](){ test_basic_deallocate(); }).join();
-    std::thread([](){ test_release_to_bucket_cache(); }).join();
-    std::thread([](){ test_return_from_bucket_cache(); }).join();
+    std::thread([](){ minimalloc::test_basic_allocate(); }).join();
+    std::thread([](){ minimalloc::test_basic_deallocate(); }).join();
+    std::thread([](){ minimalloc::test_release_to_bucket_cache(); }).join();
+    std::thread([](){ minimalloc::test_return_from_bucket_cache(); }).join();
 
     return 0;
 
 }
+

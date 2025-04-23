@@ -1,11 +1,13 @@
 #include "bucket.h"
+#include <iostream>
 
+namespace minimalloc {
 // constructor
-bucket::bucket(uint8_t* pbuffer, uint8_t* pbufferend, size_t block_size){
+bucket::bucket(byte* pbuffer, byte* pbufferend, size_t block_size){
 
     // initialize linked list
     pBuffer_ = pbuffer;
-    uint8_t* address = pbuffer;
+    byte* address = pbuffer;
 
     node head_node;
     head_node.offset_ = 0;
@@ -57,3 +59,5 @@ void bucket::free(uint8_t* const pointer){
     size_++;
 
 }
+
+};

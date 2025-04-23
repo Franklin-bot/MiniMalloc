@@ -1,26 +1,28 @@
 #include "minimalloc.h"
+#include "internal/config.h"
 
 // MINIMALLOC
+//
+namespace minimalloc {
 
 thread_local std::unique_ptr<thread_cache> local_thread_cache_;
 
-using thread_id_t = std::thread::id;
+// minimalloc default constructor
+minimalloc::minimalloc() : minimalloc(DEFAULT_BLOCK_SIZES, DEFAULT_GLOBAL_POOL_SIZE) {} 
 
 // minimalloc constructor
 minimalloc::minimalloc(const std::vector<size_t>& block_sizes, uint64_t memory_pool_size)
         : block_sizes_(block_sizes),
-        memory_pool_size_(memory_pool_size),
-        bucket_count_(block_sizes.size()), 
-        max_block_(*std::max_element(block_sizes.begin(), block_sizes.end())),
-        min_block_(*std::min_element(block_sizes.begin(), block_sizes.end())),
-        p_global_pool_(std::make_unique<uint8_t[]>(memory_pool_size_)){
-
-    uint8_t* buffer_index = p_global_pool_.get();
-
-    for (size_t i = 0; i < bucket_count_; i++) {
-        block_indices_.insert({block_sizes_[i], i});
-        pool_buckets_.push_back(bucket(buffer_index, buffer_index + memory_pool_size_, block_sizes[i]));
-        buffer_index += memory_pool_size_;
+        global_pool_size_(memory_pool_size),
+        global_pool_ (Pool(memory_pool_size * block_sizes.size(), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS))
+{
+    byte* buffer_index = global_pool_.mem;
+    for (size_t i = 0; i < block_sizes_.size(); ++i) {
+        byte* start = buffer_index;
+        byte* end   = buffer_index + global_pool_size_;
+        block_indices_[block_sizes_[i]] = i;
+        global_pool_buckets_.emplace_back(start, end, block_sizes_[i]);
+        buffer_index += global_pool_size_;
     }
 
 }
@@ -34,7 +36,7 @@ void* minimalloc::allocate(size_t bytes){
     const size_t bucket_index = get_bucket(bytes);
 
     if (!local_thread_cache_){
-        local_thread_cache_ = std::make_unique<thread_cache>(bucket_count_, MAX_CACHE_CAPACITY);
+        local_thread_cache_ = std::make_unique<thread_cache>(block_sizes_.size(), MAX_CACHE_CAPACITY);
         cache_warmup(local_thread_cache_.get());
     }
 
@@ -82,11 +84,11 @@ void minimalloc::cache_warmup(thread_cache* tc){
 // used in allocation
 size_t minimalloc::get_bucket(size_t n) const {
 
-    if (n > max_block_) {
+    if (n > *std::max_element(block_sizes_.begin(), block_sizes_.end())) {
         return -1;
     }
 
-    if (n <= min_block_) {
+    if (n <= *std::min_element(block_sizes_.begin(), block_sizes_.end())) {
         return 0;
     }
 
@@ -105,8 +107,8 @@ size_t minimalloc::get_bucket(size_t n) const {
 // use in deallocation
 int minimalloc::get_bucket(void* pointer) const {
 
-    const size_t offset = (uint8_t*)pointer - p_global_pool_.get();
-    return offset/memory_pool_size_;
+    const size_t offset = static_cast<byte*>(pointer) - global_pool_.mem;
+    return offset/global_pool_size_;
 
 }
 
@@ -119,11 +121,11 @@ void minimalloc::return_from_bucket_cache(size_t n, thread_cache::bucket_cache& 
     }
 
     // correct bucket
-    bucket& b = pool_buckets_[bc.get_index()];
+    bucket& b = global_pool_buckets_[bc.get_index()];
 
     for (size_t i = 0; i < n; i++){
         void* p = bc.get_stack()[bc.get_size()-1];
-        b.free((uint8_t*)p);
+        b.free(static_cast<byte*>(p));
         bc.set_size(bc.get_size()-1);
         b.set_size(b.get_size()+1);
     }
@@ -132,7 +134,7 @@ void minimalloc::return_from_bucket_cache(size_t n, thread_cache::bucket_cache& 
 // release pointers from global pool to bucket_cache
 void minimalloc::release_to_bucket_cache(size_t n, thread_cache::bucket_cache& bc){
 
-    bucket& b = pool_buckets_[bc.get_index()];
+    bucket& b = global_pool_buckets_[bc.get_index()];
 
     for (size_t i = 0; i < n; i++){
        bc.get_stack()[bc.get_size()] = b.allocate(); 
@@ -141,13 +143,10 @@ void minimalloc::release_to_bucket_cache(size_t n, thread_cache::bucket_cache& b
     }
 }
 
-// BUCKET
-
-
 minimalloc_stats minimalloc::get_stats(){
 
     if (!local_thread_cache_){
-        local_thread_cache_ = std::make_unique<thread_cache>(bucket_count_, MAX_CACHE_CAPACITY);
+        local_thread_cache_ = std::make_unique<thread_cache>(block_sizes_.size(), MAX_CACHE_CAPACITY);
         cache_warmup(local_thread_cache_.get());
     }
 
@@ -160,8 +159,10 @@ minimalloc_stats minimalloc::get_stats(){
     }
 
 
-    for (const bucket& b : pool_buckets_){
+    for (const bucket& b : global_pool_buckets_){
         ms.global_pool_bucket_size_.push_back(b.get_size());
     }
     return ms;
 }
+
+};

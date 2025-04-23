@@ -4,9 +4,10 @@
 
 #include <stdint.h>
 
-#include "config.h"
+#include "internal/config.h"
 
 
+namespace minimalloc {
 class thread_cache{
 public:
 
@@ -38,5 +39,7 @@ public:
 
 private:
     std::vector<thread_cache::bucket_cache> bucket_cache_list_;
+
+};
 
 };

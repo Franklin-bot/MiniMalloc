@@ -1,6 +1,11 @@
+#pragma once
+
 #include <stddef.h>
 #include <stdint.h>
 
+#include "internal/config.h"
+
+namespace minimalloc {
 class bucket {
 private:
 
@@ -17,16 +22,18 @@ private:
     };
     
 
-    uint8_t* pBuffer_;
-    uint8_t* pBufferEnd_;
+    byte* pBuffer_;
+    byte* pBufferEnd_;
     node* head_;
     size_t size_;
 
 public:
-    bucket(uint8_t* pBuffer, uint8_t* pBufferEnd, size_t block_size);
+    bucket(byte* pBuffer, byte* pBufferEnd, size_t block_size);
     void* allocate();
     void free(uint8_t* pointer);
 
     size_t get_size() const { return size_; }
     void set_size(size_t size) {size_ = size; }
+};
+
 };
