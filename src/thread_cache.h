@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <stack>
 
 #include <stdint.h>
 
@@ -11,27 +12,15 @@ namespace minimalloc {
 class thread_cache{
 public:
 
-    class bucket_cache{
-    public:
+    struct bucket_cache{
 
-        bucket_cache(size_t capacity, int index);
-        void* alloc_from_bucket_cache();
+        byte* alloc_from_bucket_cache();
         void free_to_bucket_cache(void* pointer);
 
-        size_t get_size() const { return size_; }
-        void set_size(size_t size) { size_ = size; }
-        size_t get_capacity() const { return capacity_; }
-        size_t get_index() const { return index_; }
-        void set_index(size_t index) { index_ = index; }
+        size_t index_;
+        std::stack<byte*> stk{};
 
-        std::array<void*, MAX_CACHE_CAPACITY>& get_stack() { return stack; }
-
-    private:
-        size_t size_;
-        size_t capacity_;
-        int index_;
-
-        std::array<void*, MAX_CACHE_CAPACITY> stack{};
+        bucket_cache(size_t index) : index_(index) {}
     };
 
     thread_cache(size_t num_buckets, size_t bucket_cache_capacity);  

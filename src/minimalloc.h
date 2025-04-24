@@ -30,8 +30,8 @@ class minimalloc {
         void cache_warmup(thread_cache* tc);
         size_t get_bucket(size_t n) const;
         int get_bucket(void* pointer) const;
-        void return_from_bucket_cache(size_t n, thread_cache::bucket_cache& b);
-        void release_to_bucket_cache(size_t n, thread_cache::bucket_cache& b);
+        void return_from_bucket_cache(thread_cache::bucket_cache& b);
+        void release_to_bucket_cache(thread_cache::bucket_cache& b);
 
     public:
 

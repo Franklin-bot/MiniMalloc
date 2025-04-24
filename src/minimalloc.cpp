@@ -17,7 +17,7 @@ minimalloc::minimalloc(const std::vector<size_t>& block_sizes, uint64_t memory_p
         global_pool_ (Pool(memory_pool_size * block_sizes.size(), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS))
 {
     byte* buffer_index = global_pool_.mem;
-    for (size_t i = 0; i < block_sizes_.size(); ++i) {
+    for (size_t i = 0; i < block_sizes_.size(); i++) {
         byte* start = buffer_index;
         byte* end   = buffer_index + global_pool_size_;
         block_indices_[block_sizes_[i]] = i;
@@ -43,8 +43,8 @@ void* minimalloc::allocate(size_t bytes){
     thread_cache::bucket_cache& bc = local_thread_cache_->get_bucket_caches()[bucket_index];
 
     // if current bucket is empty, allocate more
-    if (bc.get_size() == 0) {
-        release_to_bucket_cache(CACHE_WARMUP_SIZE, bc);
+    if (bc.stk.empty()) {
+        release_to_bucket_cache(bc);
     }
 
     // get pointer from bucket
@@ -64,8 +64,8 @@ void minimalloc::deallocate(void* pointer){
     thread_cache::bucket_cache& bc = local_thread_cache_->get_bucket_caches()[bucket_index];
 
     // if bucket is full, empty it
-    if (bc.get_size() == bc.get_capacity()) {
-        return_from_bucket_cache(CACHE_WARMUP_SIZE, bc);
+    if (bc.stk.size() == MAX_CACHE_CAPACITY) {
+        return_from_bucket_cache(bc);
     }
 
     // return pointer to the bucket cache
@@ -76,7 +76,7 @@ void minimalloc::deallocate(void* pointer){
 void minimalloc::cache_warmup(thread_cache* tc){
 
     for (thread_cache::bucket_cache& bc : tc->get_bucket_caches()){
-        release_to_bucket_cache(CACHE_WARMUP_SIZE, bc);
+        release_to_bucket_cache(bc);
     }
 }
 
@@ -114,32 +114,25 @@ int minimalloc::get_bucket(void* pointer) const {
 
 
 // return pointers from bucket cache to global pool bucket
-void minimalloc::return_from_bucket_cache(size_t n, thread_cache::bucket_cache& bc){
-
-    if (bc.get_size() < n) {
-        return;
-    }
+void minimalloc::return_from_bucket_cache(thread_cache::bucket_cache& bc){
 
     // correct bucket
-    bucket& b = global_pool_buckets_[bc.get_index()];
+    bucket& b = global_pool_buckets_[bc.index_];
 
-    for (size_t i = 0; i < n; i++){
-        void* p = bc.get_stack()[bc.get_size()-1];
-        b.free(static_cast<byte*>(p));
-        bc.set_size(bc.get_size()-1);
-        b.set_size(b.get_size()+1);
+    for (size_t i = 0; i < CACHE_WARMUP_SIZE; i++){
+        byte* p = bc.stk.top();
+        bc.stk.pop();
+        b.deallocate(p);
     }
 }
 
 // release pointers from global pool to bucket_cache
-void minimalloc::release_to_bucket_cache(size_t n, thread_cache::bucket_cache& bc){
+void minimalloc::release_to_bucket_cache(thread_cache::bucket_cache& bc){
 
-    bucket& b = global_pool_buckets_[bc.get_index()];
+    bucket& b = global_pool_buckets_[bc.index_];
 
-    for (size_t i = 0; i < n; i++){
-       bc.get_stack()[bc.get_size()] = b.allocate(); 
-       bc.set_size(bc.get_size()+1);
-       b.set_size(b.get_size()-1);
+    for (size_t i = 0; i < CACHE_WARMUP_SIZE; i++){
+       bc.stk.push(b.allocate()); 
     }
 }
 
@@ -154,8 +147,8 @@ minimalloc_stats minimalloc::get_stats(){
     ms.block_sizes_ = block_sizes_;
 
     for (int i = 0; i < block_sizes_.size(); i++){
-        ms.thread_cache_bucket_size_.push_back(local_thread_cache_->get_bucket_caches()[i].get_size());
-        ms.thread_cache_bucket_capacity_.push_back(local_thread_cache_->get_bucket_caches()[i].get_capacity());
+        ms.thread_cache_bucket_size_.push_back(local_thread_cache_->get_bucket_caches()[i].stk.size());
+        ms.thread_cache_bucket_capacity_.push_back(MAX_CACHE_CAPACITY);
     }
 
 

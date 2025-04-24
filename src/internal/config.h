@@ -12,5 +12,5 @@ constexpr static size_t MAX_CACHE_CAPACITY = 16;
 constexpr static size_t CACHE_WARMUP_SIZE = MAX_CACHE_CAPACITY/2;
 constexpr static uint64_t DEFAULT_GLOBAL_POOL_SIZE = 1<<20;
 
-using byte = uint8_t;
+using byte = unsigned char;
 using thread_id_t = std::thread::id;
